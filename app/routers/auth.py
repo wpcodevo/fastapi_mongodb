@@ -1,11 +1,14 @@
 from datetime import datetime, timedelta
+import hashlib
+from random import randbytes
 from bson.objectid import ObjectId
 from fastapi import APIRouter, Request, Response, status, Depends, HTTPException
 from pydantic import EmailStr
 
 from app import oauth2
 from app.database import User
-from app.serializers import userEntity, userResponseEntity
+from app.email import Email
+from app.serializers import userEntity
 from .. import schemas, utils
 from app.oauth2 import AuthJWT
 from ..config import settings
@@ -16,8 +19,8 @@ ACCESS_TOKEN_EXPIRES_IN = settings.ACCESS_TOKEN_EXPIRES_IN
 REFRESH_TOKEN_EXPIRES_IN = settings.REFRESH_TOKEN_EXPIRES_IN
 
 
-@router.post('/register', status_code=status.HTTP_201_CREATED, response_model=schemas.UserResponse)
-async def create_user(payload: schemas.CreateUserSchema):
+@router.post('/register', status_code=status.HTTP_201_CREATED)
+async def create_user(payload: schemas.CreateUserSchema, request: Request):
     # Check if user already exist
     user = User.find_one({'email': payload.email.lower()})
     if user:
@@ -31,13 +34,29 @@ async def create_user(payload: schemas.CreateUserSchema):
     payload.password = utils.hash_password(payload.password)
     del payload.passwordConfirm
     payload.role = 'user'
-    payload.verified = True
+    payload.verified = False
     payload.email = payload.email.lower()
     payload.created_at = datetime.utcnow()
     payload.updated_at = payload.created_at
+
     result = User.insert_one(payload.dict())
-    new_user = userResponseEntity(User.find_one({'_id': result.inserted_id}))
-    return {"status": "success", "user": new_user}
+    new_user = User.find_one({'_id': result.inserted_id})
+    try:
+        token = randbytes(10)
+        hashedCode = hashlib.sha256()
+        hashedCode.update(token)
+        verification_code = hashedCode.hexdigest()
+        User.find_one_and_update({"_id": result.inserted_id}, {
+            "$set": {"verification_code": verification_code, "updated_at": datetime.utcnow()}})
+
+        url = f"{request.url.scheme}://{request.client.host}:{request.url.port}/api/auth/verifyemail/{token.hex()}"
+        await Email(userEntity(new_user), url, [EmailStr(payload.email)]).sendVerificationCode()
+    except Exception as error:
+        User.find_one_and_update({"_id": result.inserted_id}, {
+            "$set": {"verification_code": None, "updated_at": datetime.utcnow()}})
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail='There was an error sending email')
+    return {'status': 'success', 'message': 'Verification token successfully sent to your email'}
 
 
 @router.post('/login')
@@ -114,3 +133,19 @@ def logout(response: Response, Authorize: AuthJWT = Depends(), user_id: str = De
     response.set_cookie('logged_in', '', -1)
 
     return {'status': 'success'}
+
+
+@router.get('/verifyemail/{token}')
+def verify_me(token: str):
+    hashedCode = hashlib.sha256()
+    hashedCode.update(bytes.fromhex(token))
+    verification_code = hashedCode.hexdigest()
+    result = User.find_one_and_update({"verification_code": verification_code}, {
+        "$set": {"verification_code": None, "verified": True, "updated_at": datetime.utcnow()}}, new=True)
+    if not result:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail='Invalid verification code or account already verified')
+    return {
+        "status": "success",
+        "message": "Account verified successfully"
+    }
