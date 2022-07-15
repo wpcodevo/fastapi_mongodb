@@ -3,7 +3,6 @@ from pydantic import BaseModel, EmailStr, constr
 
 
 class UserBaseSchema(BaseModel):
-    id: str | None = None
     name: str
     email: str
     photo: str
@@ -26,6 +25,11 @@ class LoginUserSchema(BaseModel):
     password: constr(min_length=8)
 
 
+class UserResponseSchema(UserBaseSchema):
+    id: str
+    pass
+
+
 class UserResponse(BaseModel):
     status: str
-    user: UserBaseSchema
+    user: UserResponseSchema
