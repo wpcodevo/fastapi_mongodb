@@ -1,7 +1,6 @@
 from datetime import datetime, timedelta
 from bson.objectid import ObjectId
-from fastapi import APIRouter, Request, Response, status, Depends, HTTPException
-from pydantic import EmailStr
+from fastapi import APIRouter, Response, status, Depends, HTTPException
 
 from app import oauth2
 from app.database import User
