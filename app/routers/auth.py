@@ -4,7 +4,7 @@ from fastapi import APIRouter, Response, status, Depends, HTTPException
 
 from app import oauth2
 from app.database import User
-from app.serializers import userEntity, userResponseEntity
+from app.serializers.userSerializers import userEntity, userResponseEntity
 from .. import schemas, utils
 from app.oauth2 import AuthJWT
 from ..config import settings
