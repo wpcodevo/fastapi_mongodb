@@ -33,15 +33,19 @@ def create_post(post: schemas.CreatePostSchema, user_id: str = Depends(require_u
     post.user = ObjectId(user_id)
     post.created_at = datetime.utcnow()
     post.updated_at = post.created_at
-    result = Post.insert_one(post.dict())
-    pipeline = [
-        {'$match': {'_id': result.inserted_id}},
-        {'$lookup': {'from': 'users', 'localField': 'user',
-                     'foreignField': '_id', 'as': 'user'}},
-        {'$unwind': '$user'},
-    ]
-    new_post = postListEntity(Post.aggregate(pipeline))[0]
-    return new_post
+    try:
+        result = Post.insert_one(post.dict())
+        pipeline = [
+            {'$match': {'_id': result.inserted_id}},
+            {'$lookup': {'from': 'users', 'localField': 'user',
+                         'foreignField': '_id', 'as': 'user'}},
+            {'$unwind': '$user'},
+        ]
+        new_post = postListEntity(Post.aggregate(pipeline))[0]
+        return new_post
+    except:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT,
+                            detail=f"Post with title: {post.title} already exists")
 
 
 @router.put('/{id}')
