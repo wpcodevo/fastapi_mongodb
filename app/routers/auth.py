@@ -62,10 +62,11 @@ async def create_user(payload: schemas.CreateUserSchema, request: Request):
 @router.post('/login')
 def login(payload: schemas.LoginUserSchema, response: Response, Authorize: AuthJWT = Depends()):
     # Check if the user exist
-    user = userEntity(User.find_one({'email': payload.email.lower()}))
-    if not user:
+    db_user = User.find_one({'email': payload.email.lower()})
+    if not db_user:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail='Incorrect Email or Password')
+    user = userEntity(db_user)
 
     # Check if user verified his email
     if not user['verified']:
