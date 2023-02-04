@@ -13,11 +13,14 @@ class Settings(BaseSettings):
 
     CLIENT_ORIGIN: str
 
+    PASSWORD_MIN_LEN: int
+
     EMAIL_HOST: str
     EMAIL_PORT: int
     EMAIL_USERNAME: str
     EMAIL_PASSWORD: str
     EMAIL_FROM: EmailStr
+    EMAIL_STARTTLS: bool
 
     class Config:
         env_file = './.env'
