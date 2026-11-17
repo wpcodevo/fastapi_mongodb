@@ -1,7 +1,18 @@
-version: '3'
 services:
+  auth-api:
+    build: .
+    container_name: microsservico-auth
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./.env
+    volumes:
+      - ./app:/app/app
+    depends_on:
+      - mongo
+
   mongo:
-    image: mongo:latest
+    image: mongo:7
     container_name: mongo
     env_file:
       - ./.env
@@ -12,7 +23,7 @@ services:
     volumes:
       - mongo:/data/db
     ports:
-      - '6000:27017'
+      - "6000:27017"
 
 volumes:
   mongo:

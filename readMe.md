@@ -1,75 +1,123 @@
-# RESTful API with Python, FastAPI, Pydantic, and MongoDB
+# Microsserviço de Autenticação (JWT + FastAPI + MongoDB)
 
-## 1. API with Python, FastAPI, and MongoDB: JWT Authentication
+Microsserviço responsável pelo cadastro, login, validação e revogação de sessões de usuários via tokens **JWT (RS256)** para a disciplina de **Sistemas Distribuídos**.
 
-This article will teach you how to add JSON Web Token (JWT) authentication to your FastAPI app using PyMongo, Pydantic, FastAPI JWT Auth package, and Docker-compose.
+Esta aplicação foi projetada para rodar de forma isolada em containers **Docker**, permitindo que os demais serviços do projeto (banco de séries temporais e armazenamento de imagens no MinIO) validem o acesso dos usuários utilizando a chave pública JWT.
 
-![API with Python, FastAPI, and MongoDB: JWT Authentication](https://codevoweb.com/wp-content/uploads/2022/07/API-with-Python-FastAPI-and-MongoDB-JWT-Authentication.webp)
+---
 
-### Topics Covered
+## Tecnologias Utilizadas
 
-- How to Setup FastAPI with MongoDB
-- Starting the FastAPI Server
-- Set up Environment Variables with Pydantic
-- Connect to the MongoDB Database
-- Creating the Schemas with Pydantic
-- Create Serializers for the MongoDB BSON Documents
-- Password Management in FastAPI
-- Creating Utility Functions to Sign and Verify JWTs
-- Creating the Authentication Controllers in FastAPI
-    - User Registration Handler
-    - User Sign-in Handler
-    - Refresh Access Token Handler
-    - Sign out User Handler
-- How to Protect Private Routes
-- Creating a User Handler
-- Adding the API Routes and CORS
-- Testing the API with Postman
+* **Python 3.11 + FastAPI:** Framework web para construção da API REST e documentação automática (Swagger).
+* **PyJWT (RS256) + bcrypt:** Assinatura assimétrica de tokens JWT e criptografia de senhas.
+* **MongoDB 7:** Banco de dados NoSQL para armazenamento de usuários e lista de revogação de tokens (*blacklist*).
+* **Docker & Docker Compose:** Orquestração e isolamento dos containers da API e do banco de dados.
 
-Read the entire article here: [https://codevoweb.com/api-with-python-fastapi-and-mongodb-jwt-authentication](https://codevoweb.com/api-with-python-fastapi-and-mongodb-jwt-authentication)
+---
 
-## 2. Build API with Python & FastAPI: SignUp User and Verify Email
+## Pré-requisitos
 
-This article will teach you how to send HTML Emails with Python, FastAPI, PyMongo, MongoDB, Jinja2, and Docker. Also, you will learn how to use Jinja2 to generate different HTML templates.
+Você **não precisa** instalar Python nem MongoDB diretamente no seu computador. Basta ter instalado:
 
-![Build API with Python & FastAPI: SignUp User and Verify Email](https://codevoweb.com/wp-content/uploads/2022/07/Build-API-with-Python-FastAPI-SignUp-User-and-Verify-Email.webp)
+1. **Docker:**
+   * **Windows / macOS:** [Docker Desktop](https://www.docker.com/products/docker-desktop/) (deixe-o aberto antes de executar os comandos).
+   * **Linux:** Docker Engine + plugin Docker Compose.
+2. **Git** ou **GitHub Desktop** (para clonar o repositório).
 
-### Topics Covered
+---
 
-- Send HTML Emails with Jinja2 & FastAPI Example
-- Creating the SMTP Provider Account
-- Edit the Environment Variables File
-- Validating the Environment Variables with Pydantic
-- Creating the HTML Email Templates in FastAPI
-- Creating the SMTP Email Sender
-- Sending the HTML Emails in FastAPI
-- Update the SignUp Controller
-- Create a Handler to Validate the Verification Code
+## Como Executar o Projeto
 
-Read the entire article here: [https://codevoweb.com/api-with-python-fastapi-signup-user-and-verify-email](https://codevoweb.com/api-with-python-fastapi-signup-user-and-verify-email)
+### 1. Clone o repositório
+Abra o terminal (ou o GitHub Desktop) e baixe o projeto para sua máquina:
 
-## 3. CRUD RESTful API Server with Python, FastAPI, and MongoDB
+```bash
+git clone <URL-DO-REPOSITORIO-DO-GRUPO>
+cd <NOME-DA-PASTA-DO-PROJETO>
+```
 
-This article will teach you how to create a CRUD RESTful API with Python, FastAPI, PyMongo, MongoDB, and Docker-compose to perform the basic Create/Read/Update/Delete operations against a database.
+### 2. Configure o arquivo `.env`
+Caso o arquivo `.env` não venha junto ao clonar o repositório (por estar listado no `.gitignore`), crie um arquivo chamado `.env` na raiz do projeto (ao lado do `docker-compose.yml`) e cole o conteúdo abaixo:
 
-![CRUD RESTful API Server with Python, FastAPI, and MongoDB](https://codevoweb.com/wp-content/uploads/2022/07/CRUD-RESTful-API-Server-with-Python-FastAPI-and-MongoDB.webp)
+```env
+MONGO_INITDB_ROOT_USERNAME=admin
+MONGO_INITDB_ROOT_PASSWORD=password123
+MONGO_INITDB_DATABASE=fastapi
 
-### Topics Covered
+DATABASE_URL=mongodb://admin:password123@mongo:27017/fastapi?authSource=admin
 
-- Python, FastAPI, MongoDB CRUD API Overview
-- Setting up FastAPI with MongoDB
-    - Installing FastAPI
-- Running the FastAPI Server
-- Loading Environment Variables with Pydantic
-- Connecting to the MongoDB Database Server
-- Creating the Schemas with Pydantic
-- Serializers for the MongoDB Documents
-- Creating the API Route Controllers
-    - Get All Posts Controller
-    - Create New Post Controller
-    - Update Post Controller
-    - Get Single Post Controller
-    - Delete Post Controller
-- Add the Routes to the FastAPI Middleware Stack
+ACCESS_TOKEN_EXPIRES_IN=30
+REFRESH_TOKEN_EXPIRES_IN=60
+JWT_ALGORITHM=RS256
 
-Read the entire article here: [https://codevoweb.com/crud-restful-api-server-with-python-fastapi-and-mongodb](https://codevoweb.com/crud-restful-api-server-with-python-fastapi-and-mongodb)
+CLIENT_ORIGIN=http://localhost:3000
+
+JWT_PRIVATE_KEY=LS0tLS1CRUdJTiBSU0EgUFJJVkFURSBLRVktLS0tLQpNSUlCT2dJQkFBSkJBSSs3QnZUS0FWdHVQYzEzbEFkVk94TlVmcWxzMm1SVmlQWlJyVFpjd3l4RVhVRGpNaFZuCi9KVHRsd3h2a281T0pBQ1k3dVE0T09wODdiM3NOU3ZNd2xNQ0F3RUFBUUpBYm5LaENOQ0dOSFZGaHJPQ0RCU0IKdmZ2ckRWUzVpZXAwd2h2SGlBUEdjeWV6bjd0U2RweUZ0NEU0QTNXT3VQOXhqenNjTFZyb1pzRmVMUWlqT1JhUwp3UUloQU84MWl2b21iVGhjRkltTFZPbU16Vk52TGxWTW02WE5iS3B4bGh4TlpUTmhBaUVBbWRISlpGM3haWFE0Cm15QnNCeEhLQ3JqOTF6bVFxU0E4bHUvT1ZNTDNSak1DSVFEbDJxOUdtN0lMbS85b0EyaCtXdnZabGxZUlJPR3oKT21lV2lEclR5MUxaUVFJZ2ZGYUlaUWxMU0tkWjJvdXF4MHdwOWVEejBEWklLVzVWaSt6czdMZHRDdUVDSUVGYwo3d21VZ3pPblpzbnU1clBsTDJjZldLTGhFbWwrUVFzOCtkMFBGdXlnCi0tLS0tRU5EIFJTQSBQUklWQVRFIEtFWS0tLS0t
+JWT_PUBLIC_KEY=LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUZ3d0RRWUpLb1pJaHZjTkFRRUJCUUFEU3dBd1NBSkJBSSs3QnZUS0FWdHVQYzEzbEFkVk94TlVmcWxzMm1SVgppUFpSclRaY3d5eEVYVURqTWhWbi9KVHRsd3h2a281T0pBQ1k3dVE0T09wODdiM3NOU3ZNd2xNQ0F3RUFBUT09Ci0tLS0tRU5EIFBVQkxJQyBLRVktLS0tLQ==
+```
+
+### 3. Suba os containers com Docker Compose
+Na raiz do projeto, execute:
+
+```bash
+docker compose up --build -d
+```
+
+* Na primeira execução, o Docker baixará as imagens do Python e do MongoDB e instalará as dependências automaticamente.
+* Para verificar se os containers estão ativos:
+  ```bash
+  docker ps
+  ```
+* Para acompanhar os logs da API em tempo real:
+  ```bash
+  docker logs -f microsservico-auth
+  ```
+
+---
+
+## Como Testar a API
+
+Com os containers em execução, acesse a interface interativa do Swagger no navegador:
+
+**`http://localhost:8000/docs`**
+
+### Rotas Disponíveis
+
+| Método | Rota | Descrição |
+| :--- | :--- | :--- |
+| `GET` | `/api/healthchecker` | Verifica se o serviço está online. |
+| `POST` | `/api/auth/register` | Cadastra um novo usuário (`name`, `email`, `password`). Retorna `409` se o e-mail já existir. |
+| `POST` | `/api/auth/login` | Autentica o usuário e retorna o `access_token` (JWT válido por 30 min). |
+| `GET` | `/api/auth/verify` | Valida o token JWT enviado no cabeçalho `Authorization: Bearer <token>`. |
+| `POST` | `/api/auth/logout` | Revoga o token atual (adiciona à *blacklist* no MongoDB). |
+
+### Passo a passo rápido no Swagger (`/docs`)
+1. Execute **`POST /api/auth/register`** para criar uma conta.
+2. Execute **`POST /api/auth/login`** com o mesmo e-mail e senha e copie o valor de `access_token` (sem as aspas).
+3. Clique no botão **Authorize** (no topo direito da tela), cole o token no campo `Value` e clique em **Authorize** $\rightarrow$ **Close**.
+4. Teste **`GET /api/auth/verify`** para confirmar que o token é válido.
+5. Teste **`POST /api/auth/logout`** para encerrar a sessão e tente rodar `/verify` novamente para confirmar o bloqueio (`401 Unauthorized`).
+
+---
+
+## Comandos Úteis do Docker
+
+* **Parar os containers:**
+  ```bash
+  docker compose down
+  ```
+* **Parar os containers e apagar todos os dados salvos no MongoDB:**
+  ```bash
+  docker compose down -v
+  ```
+* **Reconstruir após alterar dependências (`requirements.txt`):**
+  ```bash
+  docker compose up --build -d
+  ```
+
+---
+
+## Resolução de Problemas Comuns
+
+* **Erro de conexão com o daemon do Docker:** Certifique-se de que o **Docker Desktop** está aberto e com o status *Running* antes de rodar `docker compose up`.
+* **Porta `8000` ou `6000` já está em uso:** Verifique se não há outro container ou serviço local ocupando essas portas (`docker ps`) ou altere o mapeamento de portas no `docker-compose.yml`.
